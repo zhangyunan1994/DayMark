@@ -17,7 +17,7 @@ defineEmits<{
     <div class="p-5 border-b">
       <div class="flex items-center gap-2 mb-4">
         <Layout class="w-5 h-5 text-primary" />
-        <h2 class="font-bold text-lg">任务管理中心</h2>
+        <h2 class="font-bold text-lg"> DayMark </h2>
       </div>
       <Button class="w-full gap-2" @click="$emit('newTask')">
         <Plus class="w-4 h-4" /> 新建任务

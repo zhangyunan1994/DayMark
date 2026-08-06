@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+backend/tasks.db
+node_modules/
+dist/
+.workbuddy
+.DS_Store
+.idea/

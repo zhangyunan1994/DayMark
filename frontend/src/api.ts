@@ -1,3 +1,5 @@
+import { invoke } from '@tauri-apps/api/core'
+
 export type TaskStatus = 'todo' | 'inProgress' | 'review' | 'done'
 export type TaskPriority = 'low' | 'medium' | 'high'
 
@@ -115,47 +117,30 @@ export interface RewriteMRResult {
   web_url: string
 }
 
-const BASE_URL = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000'
-
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
-    ...options,
-  })
-  if (!res.ok) {
-    const body = await res.text().catch(() => '')
-    throw new Error(`${res.status} ${res.statusText}: ${body}`)
-  }
-  if (res.status === 204) return undefined as T
-  return res.json()
-}
-
 export const api = {
-  list: () => request<Task[]>('/api/tasks'),
-  create: (input: TaskInput) =>
-    request<Task>('/api/tasks', { method: 'POST', body: JSON.stringify(input) }),
+  list: () => invoke<Task[]>('list_tasks'),
+  create: (input: TaskInput) => invoke<Task>('create_task', { input }),
   update: (id: number, input: Partial<TaskInput>) =>
-    request<Task>(`/api/tasks/${id}`, { method: 'PUT', body: JSON.stringify(input) }),
-  remove: (id: number) => request<void>(`/api/tasks/${id}`, { method: 'DELETE' }),
+    invoke<Task>('update_task', { id, input }),
+  remove: (id: number) => invoke<void>('delete_task', { id }),
 
-  getSettings: () => request<Settings>('/api/settings'),
-  saveSettings: (settings: Settings) =>
-    request<Settings>('/api/settings', { method: 'PUT', body: JSON.stringify(settings) }),
+  getSettings: () => invoke<Settings>('get_settings'),
+  saveSettings: (settings: Settings) => invoke<Settings>('save_settings', { settings }),
 
-  testLlm: (config: LLMConfig) =>
-    request<TestResult>('/api/llm/test', { method: 'POST', body: JSON.stringify({ config }) }),
-  testGitlab: (config: GitLabConfig) =>
-    request<TestResult>('/api/gitlab/test', { method: 'POST', body: JSON.stringify({ config }) }),
+  testLlm: (config: LLMConfig) => invoke<TestResult>('test_llm', { config }),
+  testGitlab: (config: GitLabConfig) => invoke<TestResult>('test_gitlab', { config }),
+  gitlabProjects: () => invoke<Record<string, unknown>[]>('gitlab_projects'),
   gitlabMergeRequests: (config: GitLabConfig, updated_after: string, updated_before: string) =>
-    request<Record<string, unknown>[]>('/api/gitlab/merge-requests', {
-      method: 'POST',
-      body: JSON.stringify({ config, updated_after, updated_before }),
+    invoke<Record<string, unknown>[]>('gitlab_merge_requests', {
+      config,
+      updatedAfter: updated_after,
+      updatedBefore: updated_before,
     }),
-  gitlabMrList: () => request<GitLabMR[]>('/api/gitlab/merge-requests'),
+  gitlabMrList: () => invoke<GitLabMR[]>('gitlab_mr_list'),
   rewriteMr: (projectId: number, mergeRequestIid: number) =>
-    request<RewriteMRResult>('/api/gitlab/mr/rewrite', {
-      method: 'POST',
-      body: JSON.stringify({ project_id: projectId, merge_request_iid: mergeRequestIid }),
+    invoke<RewriteMRResult>('rewrite_mr', {
+      projectId,
+      mergeRequestIid,
     }),
 
   generateReport: (input: {
@@ -165,16 +150,16 @@ export const api = {
     date_start: string
     date_end: string
     include_gitlab: boolean
-  }) => request<Report>('/api/reports/generate', { method: 'POST', body: JSON.stringify(input) }),
-  listReports: () => request<Report[]>('/api/reports'),
-  getReport: (id: number) => request<Report>(`/api/reports/${id}`),
-  deleteReport: (id: number) => request<void>(`/api/reports/${id}`, { method: 'DELETE' }),
+  }) => invoke<Report>('generate_report', { req: input }),
+  listReports: () => invoke<Report[]>('list_reports'),
+  getReport: (id: number) => invoke<Report>('get_report', { id }),
+  deleteReport: (id: number) => invoke<void>('delete_report', { id }),
 
-  listReportTemplates: () => request<ReportTemplate[]>('/api/report-templates'),
+  listReportTemplates: () => invoke<ReportTemplate[]>('list_report_templates'),
   createReportTemplate: (input: ReportTemplateInput) =>
-    request<ReportTemplate>('/api/report-templates', { method: 'POST', body: JSON.stringify(input) }),
+    invoke<ReportTemplate>('create_report_template', { input }),
   updateReportTemplate: (id: string, input: ReportTemplateInput) =>
-    request<ReportTemplate>(`/api/report-templates/${id}`, { method: 'PUT', body: JSON.stringify(input) }),
+    invoke<ReportTemplate>('update_report_template', { id, input }),
   deleteReportTemplate: (id: string) =>
-    request<void>(`/api/report-templates/${id}`, { method: 'DELETE' }),
+    invoke<void>('delete_report_template', { id }),
 }

@@ -1,6 +1,6 @@
-# 任务管理工具
+# DayMark
 
-个人项目（任务）管理工具：前端 React + Vite + TypeScript（Tailwind + shadcn/ui 风格），后端 FastAPI + SQLite。
+个人项目（任务）管理桌面客户端：Vue 3 + Vite + TypeScript（Tailwind + shadcn/ui 风格）前端，Tauri v2 + Rust 原生后端，内置 SQLite。
 
 ## 功能
 
@@ -15,53 +15,49 @@
 ## 目录结构
 
 ```
-backend/   FastAPI 后端（uv 管理依赖，SQLAlchemy + SQLite）
-frontend/  React + Vite 前端（pnpm）
+frontend/           Vue 3 + Vite 前端（pnpm）
+frontend/src-tauri/ Tauri v2 + Rust 后端（rusqlite 内置 SQLite）
+backend/            旧版 FastAPI 后端（已弃用，仅作数据迁移来源）
 ```
 
-## 启动
+## 构建与运行
 
-后端（端口 8000，API 文档 http://localhost:8000/docs）：
-
-```bash
-cd backend
-uv sync          # 首次安装依赖
-uv run uvicorn app.main:app --reload
-```
-
-前端（端口 5173）：
+开发模式（热重载）：
 
 ```bash
 cd frontend
-pnpm install     # 首次安装依赖
-pnpm dev
+pnpm install   # 首次安装依赖
+pnpm tauri dev
 ```
 
-打开 http://localhost:5173 使用。
+构建桌面应用（产出 .app / .dmg）：
 
-## API
+```bash
+cd frontend
+pnpm tauri build
+```
 
-| 方法 | 路径 | 说明 |
-| ---- | ---- | ---- |
-| GET    | /api/tasks        | 任务列表 |
-| POST   | /api/tasks        | 新建任务 |
-| GET    | /api/tasks/{id}   | 任务详情 |
-| PUT    | /api/tasks/{id}   | 更新任务 |
-| DELETE | /api/tasks/{id}   | 删除任务 |
+数据库位置：`~/.local/share/daymark/daymark.db`（首次安装自动创建）。
+
+## 架构说明
+
+原 HTTP API 已全部改为 Tauri 原生命令（`invoke` 直调，无网络层），前端 `src/api.ts` 保持原有接口签名不变：
+
+- `list_tasks` / `create_task` / `update_task` / `delete_task`
+- `get_settings` / `save_settings`
+- `test_llm` / `test_gitlab`
+- `gitlab_projects` / `gitlab_merge_requests` / `gitlab_mr_list` / `rewrite_mr`
+- `generate_report` / `list_reports` / `get_report` / `delete_report`
+- `list_report_templates` / `create_report_template` / `update_report_template` / `delete_report_template`
+
+任务字段：title、description、status（todo/inProgress/review/done）、priority（low/medium/high）、assignee、due_date、tag、urgent、important、subtasks（JSON）。
 | GET    | /api/settings     | 获取设置（LLM+GitLab） |
 | PUT    | /api/settings     | 更新设置 |
 | POST   | /api/llm/test     | 测试 LLM 连接 |
 | POST   | /api/gitlab/test  | 测试 GitLab 连接 |
 | GET    | /api/gitlab/projects | 获取 GitLab 项目列表 |
 | POST   | /api/gitlab/merge-requests | 获取 GitLab MR 列表 |
-| POST   | /api/reports/generate | 生成报告 |
-| GET    | /api/reports      | 报告列表 |
-| GET    | /api/reports/{id} | 报告详情 |
-| DELETE | /api/reports/{id} | 删除报告 |
-
 任务字段：title、description、status（todo/inProgress/review/done）、priority（low/medium/high）、assignee、due_date、tag、urgent、important、subtasks（JSON）。
-
-数据库文件：`backend/tasks.db`（首次启动自动创建）。
 
 ## 设置
 

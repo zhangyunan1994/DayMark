@@ -6,4 +6,9 @@ export default defineConfig({
   resolve: {
     alias: { '@': import.meta.dirname + '/src' },
   },
+  clearScreen: false,
+  server: {
+    port: 5173,
+    strictPort: true,
+  },
 })

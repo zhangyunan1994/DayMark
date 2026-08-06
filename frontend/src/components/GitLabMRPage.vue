@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import { openUrl } from '@tauri-apps/plugin-opener'
 import { GitBranch, Loader2, ExternalLink, XCircle, GitMerge, Wand2, Eye } from 'lucide-vue-next'
 import MarkdownIt from 'markdown-it'
 import Input from '@/components/ui/input.vue'
@@ -210,7 +211,7 @@ const stateCounts = computed(() => ({
               </Button>
               <a
                 :href="mr.web_url"
-                target="_blank"
+                @click.prevent="openUrl(mr.web_url)"
                 rel="noopener noreferrer"
                 class="inline-flex items-center justify-center w-7 h-7 rounded-md text-muted-foreground hover:text-primary hover:bg-muted transition-colors"
                 :title="`在 GitLab 中打开 !${mr.iid}`"

@@ -7,6 +7,7 @@ import Input from '@/components/ui/input.vue'
 import Button from '@/components/ui/button.vue'
 import Dialog from '@/components/ui/dialog.vue'
 import { api } from '@/api'
+import { ask } from '@tauri-apps/plugin-dialog'
 import type { GitLabMR } from '@/api'
 
 const md = new MarkdownIt({ html: false, linkify: true })
@@ -44,7 +45,8 @@ const isRewriting = (id: number) => rewritingIds.value.includes(id)
 
 const rewrite = async (mr: GitLabMR) => {
   if (isRewriting(mr.id)) return
-  if (!window.confirm(`确定使用 LLM 重写 MR !${mr.iid} 的标题和描述吗？`)) return
+  const confirmed = await ask(`确定使用 LLM 重写 MR !${mr.iid} 的标题和描述吗？`, { title: '重写确认' })
+  if (!confirmed) return
   rewritingIds.value = [...rewritingIds.value, mr.id]
   notice.value = ''
   try {

@@ -10,6 +10,7 @@ import Dialog from '@/components/ui/dialog.vue'
 import { api } from '@/api'
 import type { Report, ReportTemplate } from '@/api'
 import { useReportTemplates } from '@/composables/useReportTemplates'
+import { ask, message } from '@tauri-apps/plugin-dialog'
 import {
   REPORT_TEMPLATES,
   REPORT_TYPE_LABEL,
@@ -162,13 +163,14 @@ const save = async () => {
 }
 
 const removeTemplate = async (t: TemplateItem) => {
-  if (!window.confirm(`确定删除模版「${t.name}」吗？`)) return
+  const confirmed = await ask(`确定删除模版「${t.name}」吗？`, { title: '删除确认' })
+  if (!confirmed) return
   try {
     await api.deleteReportTemplate(t.id)
     if (templateId.value === t.id) templateId.value = ''
     loadCustomTemplates()
   } catch (e) {
-    alert(`删除失败：${(e as Error).message}`)
+    await message(`删除失败：${(e as Error).message}`, { title: '错误' })
   }
 }
 </script>

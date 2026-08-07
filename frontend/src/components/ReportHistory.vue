@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import MarkdownIt from 'markdown-it'
 import { Check, Copy, Loader2, Trash2 } from 'lucide-vue-next'
 import Button from '@/components/ui/button.vue'
+import { ask } from '@tauri-apps/plugin-dialog'
 import { api } from '@/api'
 import type { Report } from '@/api'
 import { REPORT_TYPE_LABEL } from '@/lib/reportTemplates'
@@ -34,7 +35,8 @@ const copy = async (report: Report) => {
 }
 
 const remove = async (id: number) => {
-  if (!confirm('确定删除该报告？')) return
+  const confirmed = await ask('确定删除该报告？', { title: '删除确认' })
+  if (!confirmed) return
   await api.deleteReport(id)
   await load()
 }

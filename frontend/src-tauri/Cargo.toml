@@ -1,6 +1,6 @@
 [package]
 name = "daymark"
-version = "0.1.0"
+version = "0.2.0"
 description = "DayMark - personal task management desktop app"
 authors = ["yunan.zhang"]
 license = ""

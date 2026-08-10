@@ -445,8 +445,9 @@ pub fn list_opencode_messages(
     params.push(Box::new(limit as i64));
 
     let mut stmt = conn.prepare(&sql).context("查询 opencode 消息失败")?;
+    let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
     let rows = stmt
-        .query_map(rusqlite::params_from_iter(params.iter()), |row| {
+        .query_map(param_refs.as_slice(), |row| {
             Ok(UserMessage {
                 time_created: row.get(0)?,
                 directory: row.get(1)?,
@@ -492,8 +493,9 @@ pub fn get_opencode_summary(
     }
 
     let mut stmt = conn.prepare(&sql).context("查询 opencode 摘要失败")?;
+    let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
     let rows = stmt
-        .query_map(rusqlite::params_from_iter(params.iter()), |row| {
+        .query_map(param_refs.as_slice(), |row| {
             Ok((
                 row.get::<_, String>(0)?,
                 row.get::<_, String>(1)?,

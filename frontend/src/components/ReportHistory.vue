@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import MarkdownIt from 'markdown-it'
-import { Check, Copy, Loader2, Trash2 } from 'lucide-vue-next'
+import { Check, Copy, ImageDown, Loader2, Trash2 } from 'lucide-vue-next'
 import Button from '@/components/ui/button.vue'
 import { ask } from '@tauri-apps/plugin-dialog'
 import { api } from '@/api'
 import type { Report } from '@/api'
 import { REPORT_TYPE_LABEL } from '@/lib/reportTemplates'
+import { renderReportImage } from '@/lib/reportImageRenderer'
 
 const md = new MarkdownIt()
 
@@ -14,6 +15,8 @@ const reports = ref<Report[]>([])
 const loading = ref(true)
 const expandedId = ref<number | null>(null)
 const copiedId = ref<number | null>(null)
+const imageCopiedId = ref<number | null>(null)
+const imageLoadingId = ref<number | null>(null)
 
 const load = async () => {
   loading.value = true
@@ -32,6 +35,20 @@ const copy = async (report: Report) => {
   await navigator.clipboard.writeText(report.content)
   copiedId.value = report.id
   setTimeout(() => (copiedId.value = null), 2000)
+}
+
+const copyAsImage = async (report: Report) => {
+  imageLoadingId.value = report.id
+  try {
+    const blob = await renderReportImage(report)
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
+    imageCopiedId.value = report.id
+    setTimeout(() => (imageCopiedId.value = null), 2000)
+  } catch (e) {
+    console.error(e)
+  } finally {
+    imageLoadingId.value = null
+  }
 }
 
 const remove = async (id: number) => {
@@ -78,6 +95,12 @@ const remove = async (id: number) => {
               </div>
             </div>
             <div class="flex items-center gap-1 shrink-0 ml-4">
+              <Button variant="ghost" size="sm" class="gap-1" :disabled="imageLoadingId !== null" @click.stop="copyAsImage(r)">
+                <Loader2 v-if="imageLoadingId === r.id" class="w-3.5 h-3.5 animate-spin" />
+                <Check v-else-if="imageCopiedId === r.id" class="w-3.5 h-3.5 text-emerald-600" />
+                <ImageDown v-else class="w-3.5 h-3.5" />
+                {{ imageLoadingId === r.id ? '生成中...' : imageCopiedId === r.id ? '已复制' : '复制为图片' }}
+              </Button>
               <Button variant="ghost" size="sm" class="gap-1" @click.stop="copy(r)">
                 <Check v-if="copiedId === r.id" class="w-3.5 h-3.5 text-emerald-600" />
                 <Copy v-else class="w-3.5 h-3.5" />

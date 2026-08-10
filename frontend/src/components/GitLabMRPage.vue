@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { openUrl } from '@tauri-apps/plugin-opener'
-import { GitBranch, Loader2, ExternalLink, XCircle, GitMerge, Wand2, Eye } from 'lucide-vue-next'
+import { GitBranch, Loader2, ExternalLink, XCircle, GitMerge, Wand2, Eye, RefreshCw } from 'lucide-vue-next'
 import MarkdownIt from 'markdown-it'
 import Input from '@/components/ui/input.vue'
 import Button from '@/components/ui/button.vue'
@@ -43,6 +43,16 @@ onMounted(load)
 
 const isRewriting = (id: number) => rewritingIds.value.includes(id)
 
+const projectNameFromUrl = (url: string) => {
+  try {
+    const u = new URL(url)
+    const path = u.pathname.replace(/\/-\/merge_requests(\/.*)?$/, '').replace(/^\/+/, '')
+    return decodeURIComponent(path)
+  } catch {
+    return ''
+  }
+}
+
 const rewrite = async (mr: GitLabMR) => {
   if (isRewriting(mr.id)) return
   const confirmed = await ask(`确定使用 LLM 重写 MR !${mr.iid} 的标题和描述吗？`, { title: '重写确认' })
@@ -71,7 +81,8 @@ const filtered = computed(() => {
       mr.title.toLowerCase().includes(q) ||
       (mr.source_branch ?? '').toLowerCase().includes(q) ||
       (mr.target_branch ?? '').toLowerCase().includes(q) ||
-      (mr.author?.username ?? '').toLowerCase().includes(q)
+      (mr.author?.username ?? '').toLowerCase().includes(q) ||
+      projectNameFromUrl(mr.web_url).toLowerCase().includes(q)
     )
   }
   return result
@@ -111,9 +122,19 @@ const stateCounts = computed(() => ({
       <div class="flex items-center gap-2">
         <Input
           v-model="search"
-          placeholder="搜索标题、分支、作者..."
+          placeholder="搜索标题、分支、作者、项目..."
           class="h-9 w-64"
         />
+        <Button
+          variant="outline"
+          size="sm"
+          class="h-9 px-3 gap-1.5"
+          :disabled="loading"
+          @click="load"
+        >
+          <RefreshCw class="w-4 h-4" :class="{ 'animate-spin': loading }" />
+          刷新
+        </Button>
       </div>
     </header>
 
@@ -171,6 +192,9 @@ const stateCounts = computed(() => ({
                 </span>
                 <span class="text-xs text-muted-foreground">
                   !{{ mr.iid }}
+                </span>
+                <span v-if="projectNameFromUrl(mr.web_url)" class="text-xs text-muted-foreground font-mono">
+                  {{ projectNameFromUrl(mr.web_url) }}
                 </span>
               </div>
               <h3 class="font-medium text-sm group-hover:text-primary transition-colors">
@@ -243,6 +267,9 @@ const stateCounts = computed(() => ({
             </span>
             <span class="text-xs text-muted-foreground">!{{ detailMr.iid }}</span>
             <span v-if="detailMr.draft" class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 border border-gray-200">Draft</span>
+          </div>
+          <div v-if="projectNameFromUrl(detailMr.web_url)" class="text-xs text-muted-foreground font-mono mb-1">
+            {{ projectNameFromUrl(detailMr.web_url) }}
           </div>
           <h2 class="text-lg font-bold leading-snug">{{ detailMr.title }}</h2>
           <div class="flex items-center gap-3 mt-2 text-xs text-muted-foreground">

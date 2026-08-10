@@ -200,3 +200,35 @@ fn default_report_type() -> String {
 fn default_true() -> bool {
     true
 }
+
+#[derive(Debug, Clone, Serialize)]
+pub struct UserMessage {
+    pub time_created: String,
+    pub directory: String,
+    pub session_id: String,
+    pub title: String,
+    pub user_text: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct DailySummary {
+    pub date: String,
+    pub message_count: usize,
+    pub session_count: usize,
+    pub directories: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct AnalyticsSummary {
+    pub total_messages: usize,
+    pub total_sessions: usize,
+    pub total_directories: usize,
+    pub date_range: Option<DateRange>,
+    pub daily_summaries: Vec<DailySummary>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct DateRange {
+    pub earliest: String,
+    pub latest: String,
+}

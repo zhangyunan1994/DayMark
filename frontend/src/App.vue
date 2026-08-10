@@ -7,12 +7,13 @@ import SettingsPage from '@/components/SettingsPage.vue'
 import ReportHistory from '@/components/ReportHistory.vue'
 import ReportGeneratorPage from '@/components/ReportGeneratorPage.vue'
 import GitLabMRPage from '@/components/GitLabMRPage.vue'
+import OpenCodeAnalytics from '@/components/OpenCodeAnalytics.vue'
 import { useTasks } from '@/composables/useTasks'
 import { useServerSettings } from '@/composables/useServerSettings'
 import { useFilters } from '@/composables/useFilters'
 import type { Task } from '@/api'
 
-type ViewMode = 'board' | 'quadrant' | 'list' | 'gantt' | 'reports' | 'templates' | 'settings' | 'mr'
+type ViewMode = 'board' | 'quadrant' | 'list' | 'gantt' | 'reports' | 'templates' | 'settings' | 'mr' | 'opencode'
 type TaskViewMode = 'board' | 'quadrant' | 'list' | 'gantt'
 
 const TASK_VIEW_MODES: TaskViewMode[] = ['board', 'quadrant', 'list', 'gantt']
@@ -67,6 +68,7 @@ const toggleView = (mode: ViewMode) => {
       @open-board="viewMode = 'list'"
       @open-templates="toggleView('templates')"
       @open-mr="toggleView('mr')"
+      @open-opencode="toggleView('opencode')"
     />
     <div class="flex-1 flex flex-col overflow-hidden">
       <TaskBoardPage
@@ -86,6 +88,7 @@ const toggleView = (mode: ViewMode) => {
         <ReportHistory v-if="viewMode === 'reports'" />
         <SettingsPage v-else-if="viewMode === 'settings'" />
         <GitLabMRPage v-else-if="viewMode === 'mr'" />
+        <OpenCodeAnalytics v-else-if="viewMode === 'opencode'" />
         <ReportGeneratorPage
           v-else-if="viewMode === 'templates'"
           :has-llm="hasActiveLlm"

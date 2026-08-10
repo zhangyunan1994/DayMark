@@ -4,8 +4,8 @@ use anyhow::{Context, Result};
 use rusqlite::{params, params_from_iter, Connection, OptionalExtension, ToSql};
 
 use crate::models::{
-    Report, ReportCreate, ReportTemplate, ReportTemplateInput, Settings, Subtask, Task, TaskInput,
-    TaskUpdate,
+    AnalyticsSummary, DailySummary, DateRange, Report, ReportCreate, ReportTemplate,
+    ReportTemplateInput, Settings, Subtask, Task, TaskInput, TaskUpdate, UserMessage,
 };
 
 pub const TZ_OFFSET_SECS: i32 = 8 * 3600;
@@ -385,7 +385,182 @@ pub fn delete_report(conn: &Connection, id: i64) -> Result<()> {
         .execute("DELETE FROM reports WHERE id = ?1", [id])
         .context("删除报告失败")?;
     if changed == 0 {
-        anyhow::bail!("Report not found");
+        anyhow::anyhow!("Report not found");
     }
     Ok(())
+}
+
+// OpenCode Analytics functions
+
+fn open_opencode_db() -> Result<Connection> {
+    let home = dirs::home_dir().context("无法获取用户主目录")?;
+    let db_path = home.join(".local/share/opencode/opencode.db");
+    if !db_path.exists() {
+        anyhow::bail!("opencode.db 不存在于 {:?}", db_path);
+    }
+    let conn = Connection::open_with_flags(
+        &db_path,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .context("打开 opencode.db 失败")?;
+    Ok(conn)
+}
+
+pub fn list_opencode_messages(
+    date_start: Option<&str>,
+    date_end: Option<&str>,
+    directory: Option<&str>,
+    limit: usize,
+) -> Result<Vec<UserMessage>> {
+    let conn = open_opencode_db()?;
+    let mut sql = String::from(
+        "SELECT
+            datetime(p.time_created / 1000, 'unixepoch', '+8 hours') as time_created,
+            s.directory,
+            s.id as session_id,
+            s.title,
+            json_extract(p.data, '$.text') as user_text
+        FROM message m
+        JOIN part p ON p.message_id = m.id
+        JOIN session s ON s.id = m.session_id
+        WHERE json_extract(m.data, '$.role') = 'user'
+          AND json_extract(p.data, '$.type') = 'text'"
+    );
+    let mut params: Vec<Box<dyn rusqlite::ToSql>> = vec![];
+
+    if let Some(start) = date_start {
+        sql.push_str(" AND datetime(p.time_created / 1000, 'unixepoch', '+8 hours') >= ?");
+        params.push(Box::new(format!("{start} 00:00:00")));
+    }
+    if let Some(end) = date_end {
+        sql.push_str(" AND datetime(p.time_created / 1000, 'unixepoch', '+8 hours') <= ?");
+        params.push(Box::new(format!("{end} 23:59:59")));
+    }
+    if let Some(dir) = directory {
+        sql.push_str(" AND s.directory LIKE ?");
+        params.push(Box::new(format!("%{dir}%")));
+    }
+
+    sql.push_str(" ORDER BY p.time_created DESC LIMIT ?");
+    params.push(Box::new(limit as i64));
+
+    let mut stmt = conn.prepare(&sql).context("查询 opencode 消息失败")?;
+    let rows = stmt
+        .query_map(rusqlite::params_from_iter(params.iter()), |row| {
+            Ok(UserMessage {
+                time_created: row.get(0)?,
+                directory: row.get(1)?,
+                session_id: row.get(2)?,
+                title: row.get(3)?,
+                user_text: row.get::<_, Option<String>>(4)?.unwrap_or_default(),
+            })
+        })
+        .context("读取 opencode 消息失败")?;
+
+    let mut messages = Vec::new();
+    for row in rows {
+        messages.push(row?);
+    }
+    Ok(messages)
+}
+
+pub fn get_opencode_summary(
+    date_start: Option<&str>,
+    date_end: Option<&str>,
+) -> Result<AnalyticsSummary> {
+    let conn = open_opencode_db()?;
+    let mut sql = String::from(
+        "SELECT
+            datetime(p.time_created / 1000, 'unixepoch', '+8 hours') as time_created,
+            s.directory,
+            s.id as session_id
+        FROM message m
+        JOIN part p ON p.message_id = m.id
+        JOIN session s ON s.id = m.session_id
+        WHERE json_extract(m.data, '$.role') = 'user'
+          AND json_extract(p.data, '$.type') = 'text'"
+    );
+    let mut params: Vec<Box<dyn rusqlite::ToSql>> = vec![];
+
+    if let Some(start) = date_start {
+        sql.push_str(" AND datetime(p.time_created / 1000, 'unixepoch', '+8 hours') >= ?");
+        params.push(Box::new(format!("{start} 00:00:00")));
+    }
+    if let Some(end) = date_end {
+        sql.push_str(" AND datetime(p.time_created / 1000, 'unixepoch', '+8 hours') <= ?");
+        params.push(Box::new(format!("{end} 23:59:59")));
+    }
+
+    let mut stmt = conn.prepare(&sql).context("查询 opencode 摘要失败")?;
+    let rows = stmt
+        .query_map(rusqlite::params_from_iter(params.iter()), |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, String>(2)?,
+            ))
+        })
+        .context("读取 opencode 摘要失败")?;
+
+    let mut total_messages = 0usize;
+    let mut sessions: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let mut directories: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let mut daily_data: std::collections::HashMap<String, DailyData> = std::collections::HashMap::new();
+    let mut all_dates: Vec<String> = Vec::new();
+
+    struct DailyData {
+        message_count: usize,
+        session_ids: std::collections::HashSet<String>,
+        directories: std::collections::HashSet<String>,
+    }
+
+    for row in rows {
+        let (time_created, directory, session_id) = row?;
+        total_messages += 1;
+        sessions.insert(session_id.clone());
+        directories.insert(directory.clone());
+
+        let date_str = &time_created[..10];
+        all_dates.push(date_str.to_string());
+
+        let entry = daily_data
+            .entry(date_str.to_string())
+            .or_insert_with(|| DailyData {
+                message_count: 0,
+                session_ids: std::collections::HashSet::new(),
+                directories: std::collections::HashSet::new(),
+            });
+        entry.message_count += 1;
+        entry.session_ids.insert(session_id);
+        entry.directories.insert(directory);
+    }
+
+    let mut daily_summaries: Vec<DailySummary> = daily_data
+        .into_iter()
+        .map(|(date, data)| DailySummary {
+            date,
+            message_count: data.message_count,
+            session_count: data.session_ids.len(),
+            directories: data.directories.into_iter().collect(),
+        })
+        .collect();
+    daily_summaries.sort_by(|a, b| b.date.cmp(&a.date));
+
+    let date_range = if all_dates.is_empty() {
+        None
+    } else {
+        all_dates.sort();
+        Some(DateRange {
+            earliest: all_dates.first().unwrap().clone(),
+            latest: all_dates.last().unwrap().clone(),
+        })
+    };
+
+    Ok(AnalyticsSummary {
+        total_messages,
+        total_sessions: sessions.len(),
+        total_directories: directories.len(),
+        date_range,
+        daily_summaries,
+    })
 }

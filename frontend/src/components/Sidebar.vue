@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Layout, Plus, Settings, ListTodo, NotebookPen, History, GitBranch } from 'lucide-vue-next'
+import { Layout, Plus, Settings, ListTodo, NotebookPen, History, GitBranch, BarChart3 } from 'lucide-vue-next'
 import Button from '@/components/ui/button.vue'
 
 defineEmits<{
@@ -9,6 +9,7 @@ defineEmits<{
   openBoard: []
   openTemplates: []
   openMr: []
+  openOpencode: []
 }>()
 </script>
 
@@ -52,6 +53,13 @@ defineEmits<{
       >
         <History class="w-4 h-4 shrink-0" />
         报告记录
+      </button>
+      <button
+        class="w-full flex items-center gap-2 py-2 px-4 rounded-md bg-secondary text-foreground font-medium text-sm transition-colors hover:bg-secondary/80"
+        @click="$emit('openOpencode')"
+      >
+        <BarChart3 class="w-4 h-4 shrink-0" />
+        OpenCode 分析
       </button>
 
     </div>

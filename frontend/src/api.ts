@@ -117,6 +117,34 @@ export interface RewriteMRResult {
   web_url: string
 }
 
+export interface UserMessage {
+  time_created: string
+  directory: string
+  session_id: string
+  title: string
+  user_text: string
+}
+
+export interface DailySummary {
+  date: string
+  message_count: number
+  session_count: number
+  directories: string[]
+}
+
+export interface DateRange {
+  earliest: string
+  latest: string
+}
+
+export interface AnalyticsSummary {
+  total_messages: number
+  total_sessions: number
+  total_directories: number
+  date_range: DateRange | null
+  daily_summaries: DailySummary[]
+}
+
 export const api = {
   list: () => invoke<Task[]>('list_tasks'),
   create: (input: TaskInput) => invoke<Task>('create_task', { input }),
@@ -162,4 +190,13 @@ export const api = {
     invoke<ReportTemplate>('update_report_template', { id, input }),
   deleteReportTemplate: (id: string) =>
     invoke<void>('delete_report_template', { id }),
+
+  opencodeMessages: (params: {
+    date_start?: string
+    date_end?: string
+    directory?: string
+    limit?: number
+  }) => invoke<UserMessage[]>('opencode_messages', params),
+  opencodeSummary: (params: { date_start?: string; date_end?: string }) =>
+    invoke<AnalyticsSummary>('opencode_summary', params),
 }

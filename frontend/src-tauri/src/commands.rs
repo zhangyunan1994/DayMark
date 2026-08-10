@@ -7,8 +7,9 @@ use tauri::State;
 
 use crate::db;
 use crate::models::{
-    GenerateReportRequest, GitLabConfig, LLMConfig, Report, ReportCreate, ReportTemplate,
-    ReportTemplateInput, RewriteMRResult, Settings, Task, TaskInput, TaskUpdate, TestResult,
+    AnalyticsSummary, GenerateReportRequest, GitLabConfig, LLMConfig, Report, ReportCreate,
+    ReportTemplate, ReportTemplateInput, RewriteMRResult, Settings, Task, TaskInput, TaskUpdate,
+    TestResult, UserMessage,
 };
 use crate::services::{gitlab, llm};
 
@@ -444,4 +445,28 @@ pub fn delete_report_template(
 ) -> Result<(), String> {
     let db = lock_db(&state)?;
     db::delete_report_template(&db, &id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn opencode_messages(
+    date_start: Option<String>,
+    date_end: Option<String>,
+    directory: Option<String>,
+    limit: Option<usize>,
+) -> Result<Vec<UserMessage>, String> {
+    db::list_opencode_messages(
+        date_start.as_deref(),
+        date_end.as_deref(),
+        directory.as_deref(),
+        limit.unwrap_or(500),
+    )
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn opencode_summary(
+    date_start: Option<String>,
+    date_end: Option<String>,
+) -> Result<AnalyticsSummary, String> {
+    db::get_opencode_summary(date_start.as_deref(), date_end.as_deref()).map_err(|e| e.to_string())
 }

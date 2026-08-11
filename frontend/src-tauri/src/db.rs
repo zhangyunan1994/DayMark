@@ -452,10 +452,12 @@ pub fn list_opencode_messages(
     let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
     let rows = stmt
         .query_map(param_refs.as_slice(), |row| {
-            let user_text: Option<Vec<u8>> = row.get(4)?;
-            let user_text_str = match user_text {
-                Some(bytes) => String::from_utf8_lossy(&bytes).to_string(),
-                None => String::new(),
+            let user_text_value: rusqlite::types::Value = row.get(4)?;
+            let user_text_str = match user_text_value {
+                rusqlite::types::Value::Text(s) => s,
+                rusqlite::types::Value::Blob(bytes) => String::from_utf8_lossy(&bytes).to_string(),
+                rusqlite::types::Value::Null => String::new(),
+                _ => String::new(),
             };
             Ok(UserMessage {
                 time_created: row.get(0)?,

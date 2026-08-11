@@ -420,7 +420,7 @@ pub fn list_opencode_messages(
             s.directory,
             s.id as session_id,
             s.title,
-            json_extract(p.data, '$.text') as user_text
+            COALESCE(CAST(json_extract(p.data, '$.text') AS TEXT), '') as user_text
         FROM message m
         JOIN part p ON p.message_id = m.id
         JOIN session s ON s.id = m.session_id
@@ -452,19 +452,12 @@ pub fn list_opencode_messages(
     let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
     let rows = stmt
         .query_map(param_refs.as_slice(), |row| {
-            let user_text_value: rusqlite::types::Value = row.get(4)?;
-            let user_text_str = match user_text_value {
-                rusqlite::types::Value::Text(s) => s,
-                rusqlite::types::Value::Blob(bytes) => String::from_utf8_lossy(&bytes).to_string(),
-                rusqlite::types::Value::Null => String::new(),
-                _ => String::new(),
-            };
             Ok(UserMessage {
                 time_created: row.get(0)?,
                 directory: row.get(1)?,
                 session_id: row.get(2)?,
                 title: row.get(3)?,
-                user_text: user_text_str,
+                user_text: row.get(4)?,
             })
         })
         .context("读取 opencode 消息失败")?;

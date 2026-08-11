@@ -497,17 +497,12 @@ pub fn get_opencode_summary(
         params.push(Box::new(format!("{end} 23:59:59")));
     }
 
+    log::info!("Summary SQL: {}", sql);
+    log::info!("Summary params count: {}", params.len());
+
     let mut stmt = conn.prepare(&sql).context("查询 opencode 摘要失败")?;
     let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
-    let rows = stmt
-        .query_map(param_refs.as_slice(), |row| {
-            Ok((
-                row.get::<_, String>(0)?,
-                row.get::<_, String>(1)?,
-                row.get::<_, String>(2)?,
-            ))
-        })
-        .context("读取 opencode 摘要失败")?;
+    let mut rows = stmt.query(param_refs.as_slice()).context("查询 opencode 摘要失败")?;
 
     let mut total_messages = 0usize;
     let mut sessions: std::collections::HashSet<String> = std::collections::HashSet::new();
@@ -521,8 +516,19 @@ pub fn get_opencode_summary(
         directories: std::collections::HashSet<String>,
     }
 
-    for row in rows {
-        let (time_created, directory, session_id) = row?;
+    while let Some(row) = rows.next()? {
+        let time_created = match row.get_ref(0)? {
+            rusqlite::types::ValueRef::Text(t) => String::from_utf8_lossy(t).to_string(),
+            _ => String::new(),
+        };
+        let directory = match row.get_ref(1)? {
+            rusqlite::types::ValueRef::Text(t) => String::from_utf8_lossy(t).to_string(),
+            _ => String::new(),
+        };
+        let session_id = match row.get_ref(2)? {
+            rusqlite::types::ValueRef::Text(t) => String::from_utf8_lossy(t).to_string(),
+            _ => String::new(),
+        };
         total_messages += 1;
         sessions.insert(session_id.clone());
         directories.insert(directory.clone());

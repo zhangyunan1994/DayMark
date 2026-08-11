@@ -474,5 +474,6 @@ pub fn opencode_summary(
     date_start: Option<String>,
     date_end: Option<String>,
 ) -> Result<AnalyticsSummary, String> {
+    log::info!("opencode_summary called with: date_start={:?}, date_end={:?}", date_start, date_end);
     db::get_opencode_summary(date_start.as_deref(), date_end.as_deref()).map_err(|e| e.to_string())
 }

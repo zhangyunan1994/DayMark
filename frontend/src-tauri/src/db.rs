@@ -450,21 +450,18 @@ pub fn list_opencode_messages(
 
     let mut stmt = conn.prepare(&sql).context("查询 opencode 消息失败")?;
     let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
-    let rows = stmt
-        .query_map(param_refs.as_slice(), |row| {
-            Ok(UserMessage {
-                time_created: row.get(0)?,
-                directory: row.get(1)?,
-                session_id: row.get(2)?,
-                title: row.get(3)?,
-                user_text: row.get(4)?,
-            })
-        })
-        .context("读取 opencode 消息失败")?;
-
     let mut messages = Vec::new();
-    for row in rows {
-        messages.push(row?);
+    let mut rows = stmt.query(param_refs.as_slice()).context("查询 opencode 消息失败")?;
+    while let Some(row) = rows.next()? {
+        let user_text_bytes: Vec<u8> = row.get(4)?;
+        let user_text = String::from_utf8_lossy(&user_text_bytes).to_string();
+        messages.push(UserMessage {
+            time_created: row.get(0)?,
+            directory: row.get(1)?,
+            session_id: row.get(2)?,
+            title: row.get(3)?,
+            user_text,
+        });
     }
     log::info!("Found {} messages", messages.len());
     Ok(messages)

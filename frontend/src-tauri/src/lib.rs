@@ -56,6 +56,7 @@ pub fn run() {
             commands::delete_report_template,
             commands::opencode_messages,
             commands::opencode_summary,
+            commands::generate_opencode_report,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

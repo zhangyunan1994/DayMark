@@ -199,4 +199,9 @@ export const api = {
   }) => invoke<UserMessage[]>('opencode_messages', params),
   opencodeSummary: (params: { date_start?: string; date_end?: string }) =>
     invoke<AnalyticsSummary>('opencode_summary', params),
+  generateOpencodeReport: (params: {
+    date_start?: string
+    date_end?: string
+    directory?: string
+  }) => invoke<Report>('generate_opencode_report', params),
 }

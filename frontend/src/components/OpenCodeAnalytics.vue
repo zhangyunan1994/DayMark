@@ -22,8 +22,27 @@ const directory = ref('')
 const messages = ref<UserMessage[]>([])
 const summary = ref<AnalyticsSummary | null>(null)
 const isLoading = ref(false)
+const isGenerating = ref(false)
 const activeTab = ref<'summary' | 'messages'>('summary')
 const errorMsg = ref('')
+
+const generateReport = async () => {
+  isGenerating.value = true
+  errorMsg.value = ''
+  try {
+    await api.generateOpencodeReport({
+      date_start: dateStart.value,
+      date_end: dateEnd.value,
+      directory: directory.value,
+    })
+    alert('报告已生成，可在报告记录中查看')
+  } catch (e: any) {
+    console.error('Failed to generate report:', e)
+    errorMsg.value = typeof e === 'string' ? e : e?.message || '生成报告失败'
+  } finally {
+    isGenerating.value = false
+  }
+}
 
 const loadData = async () => {
   isLoading.value = true
@@ -131,6 +150,13 @@ onMounted(() => {
             class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
           >
             {{ isLoading ? '加载中...' : '查询' }}
+          </button>
+          <button
+            @click="generateReport"
+            :disabled="isGenerating"
+            class="bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-green-700 disabled:opacity-50"
+          >
+            {{ isGenerating ? '生成中...' : '生成报告' }}
           </button>
 
         </div>

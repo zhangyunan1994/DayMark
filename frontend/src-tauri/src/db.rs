@@ -577,3 +577,29 @@ pub fn get_opencode_summary(
         daily_summaries,
     })
 }
+
+pub fn create_opencode_report(
+    conn: &Connection,
+    title: &str,
+    content: &str,
+    date_start: &Option<String>,
+    date_end: &Option<String>,
+) -> Result<Report> {
+    let now = utc8_now_str();
+    conn.execute(
+        "INSERT INTO reports (report_type, title, template_id, date_start, date_end, content, created_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+        params![
+            "opencode",
+            title,
+            "opencode_analysis",
+            date_start,
+            date_end,
+            content,
+            now,
+        ],
+    )
+    .context("保存报告失败")?;
+    let id = conn.last_insert_rowid();
+    get_report(conn, id)
+}

@@ -482,3 +482,56 @@ pub fn opencode_summary(
     log::info!("opencode_summary called with: date_start={:?}, date_end={:?}", ds, de);
     db::get_opencode_summary(ds, de).map_err(|e| e.to_string())
 }
+
+#[tauri::command]
+pub async fn generate_opencode_report(
+    state: State<'_, AppState>,
+    date_start: Option<String>,
+    date_end: Option<String>,
+    directory: Option<String>,
+) -> Result<Report, String> {
+    let llm_config = {
+        let db = lock_db(&state)?;
+        db::active_llm_config(&db)
+    }.ok_or_else(|| "未配置 LLM，请先在设置中配置 LLM".to_string())?;
+
+    let messages = db::list_opencode_messages(
+        date_start.as_deref().filter(|s| !s.is_empty()),
+        date_end.as_deref().filter(|s| !s.is_empty()),
+        directory.as_deref().filter(|s| !s.is_empty()),
+        500,
+    ).map_err(|e| e.to_string())?;
+
+    if messages.is_empty() {
+        return Err("没有找到消息记录".to_string());
+    }
+
+    let user_content = messages.iter().map(|m| {
+        format!("[{}] [{}] {}: {}", m.time_created, m.directory, m.title, m.user_text)
+    }).collect::<Vec<_>>().join("\n\n");
+
+    let system_prompt = "这是用户的 opencode 中 user 对话记录，分析用户在做什么?";
+    let content = llm::chat(&state.client, &llm_config, system_prompt, &user_content, 120)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let now = db::utc8_now_str();
+    let date_range = match (&date_start, &date_end) {
+        (Some(s), Some(e)) => format!("{} 至 {}", s, e),
+        (Some(s), None) => format!("{} 至今", s),
+        (None, Some(e)) => format!("至 {}", e),
+        (None, None) => "全部".to_string(),
+    };
+    let title = format!("OpenCode 使用分析 {}", date_range);
+
+    let db_conn = lock_db(&state).map_err(|e| e.to_string())?;
+    let report = db::create_opencode_report(
+        &db_conn,
+        &title,
+        &content,
+        &date_start.filter(|s| !s.is_empty()),
+        &date_end.filter(|s| !s.is_empty()),
+    ).map_err(|e| e.to_string())?;
+
+    Ok(report)
+}

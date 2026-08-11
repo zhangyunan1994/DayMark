@@ -2,8 +2,22 @@
 import { ref, onMounted } from 'vue'
 import { api, type UserMessage, type AnalyticsSummary } from '@/api'
 
-const dateStart = ref('')
-const dateEnd = ref('')
+const getWeekRange = () => {
+  const now = new Date()
+  const day = now.getDay() || 7
+  const monday = new Date(now)
+  monday.setDate(now.getDate() - day + 1)
+  const sunday = new Date(monday)
+  sunday.setDate(monday.getDate() + 6)
+  return {
+    start: monday.toISOString().split('T')[0],
+    end: sunday.toISOString().split('T')[0],
+  }
+}
+
+const weekRange = getWeekRange()
+const dateStart = ref(weekRange.start)
+const dateEnd = ref(weekRange.end)
 const directory = ref('')
 const messages = ref<UserMessage[]>([])
 const summary = ref<AnalyticsSummary | null>(null)
@@ -35,6 +49,13 @@ const loadData = async () => {
   } finally {
     isLoading.value = false
   }
+}
+
+const setThisWeek = () => {
+  const range = getWeekRange()
+  dateStart.value = range.start
+  dateEnd.value = range.end
+  loadData()
 }
 
 const setQuickDate = (days: number) => {
@@ -126,6 +147,7 @@ onMounted(() => {
           </button>
         </div>
         <div class="flex gap-2 mt-3">
+          <button @click="setThisWeek" class="text-xs text-blue-600 hover:underline">本周</button>
           <button @click="setQuickDate(7)" class="text-xs text-blue-600 hover:underline">近7天</button>
           <button @click="setQuickDate(30)" class="text-xs text-blue-600 hover:underline">近30天</button>
           <button @click="setQuickDate(90)" class="text-xs text-blue-600 hover:underline">近90天</button>

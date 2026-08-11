@@ -447,7 +447,7 @@ pub fn delete_report_template(
     db::delete_report_template(&db, &id).map_err(|e| e.to_string())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub fn opencode_messages(
     date_start: Option<String>,
     date_end: Option<String>,
@@ -472,7 +472,7 @@ pub fn opencode_messages(
     result.map_err(|e| e.to_string())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub fn opencode_summary(
     date_start: Option<String>,
     date_end: Option<String>,

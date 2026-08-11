@@ -453,8 +453,11 @@ pub fn list_opencode_messages(
     let mut messages = Vec::new();
     let mut rows = stmt.query(param_refs.as_slice()).context("查询 opencode 消息失败")?;
     while let Some(row) = rows.next()? {
-        let user_text_bytes: Vec<u8> = row.get(4)?;
-        let user_text = String::from_utf8_lossy(&user_text_bytes).to_string();
+        let user_text = match row.get_ref(4)? {
+            rusqlite::types::ValueRef::Text(t) => String::from_utf8_lossy(t).to_string(),
+            rusqlite::types::ValueRef::Blob(b) => String::from_utf8_lossy(b).to_string(),
+            _ => String::new(),
+        };
         messages.push(UserMessage {
             time_created: row.get(0)?,
             directory: row.get(1)?,

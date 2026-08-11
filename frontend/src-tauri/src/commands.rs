@@ -454,13 +454,19 @@ pub fn opencode_messages(
     directory: Option<String>,
     limit: Option<usize>,
 ) -> Result<Vec<UserMessage>, String> {
-    db::list_opencode_messages(
+    log::info!("opencode_messages called with: date_start={:?}, date_end={:?}, directory={:?}, limit={:?}", 
+        date_start, date_end, directory, limit);
+    let result = db::list_opencode_messages(
         date_start.as_deref(),
         date_end.as_deref(),
         directory.as_deref(),
         limit.unwrap_or(500),
-    )
-    .map_err(|e| e.to_string())
+    );
+    match &result {
+        Ok(msgs) => log::info!("opencode_messages returned {} messages", msgs.len()),
+        Err(e) => log::error!("opencode_messages error: {}", e),
+    }
+    result.map_err(|e| e.to_string())
 }
 
 #[tauri::command]

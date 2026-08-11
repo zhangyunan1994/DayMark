@@ -9,9 +9,11 @@ const messages = ref<UserMessage[]>([])
 const summary = ref<AnalyticsSummary | null>(null)
 const isLoading = ref(false)
 const activeTab = ref<'summary' | 'messages'>('summary')
+const errorMsg = ref('')
 
 const loadData = async () => {
   isLoading.value = true
+  errorMsg.value = ''
   try {
     const [msgs, sum] = await Promise.all([
       api.opencodeMessages({
@@ -27,8 +29,9 @@ const loadData = async () => {
     ])
     messages.value = msgs
     summary.value = sum
-  } catch (e) {
+  } catch (e: any) {
     console.error('Failed to load opencode data:', e)
+    errorMsg.value = typeof e === 'string' ? e : e?.message || '加载失败'
   } finally {
     isLoading.value = false
   }
@@ -75,6 +78,10 @@ onMounted(() => {
       <div class="mb-6">
         <h1 class="text-2xl font-bold text-gray-900 mb-2">OpenCode 用户记录分析</h1>
         <p class="text-gray-500">分析 opencode 使用情况，查看用户交互记录</p>
+      </div>
+
+      <div v-if="errorMsg" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+        {{ errorMsg }}
       </div>
 
       <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">

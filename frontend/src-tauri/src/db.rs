@@ -395,6 +395,7 @@ pub fn delete_report(conn: &Connection, id: i64) -> Result<()> {
 fn open_opencode_db() -> Result<Connection> {
     let home = dirs::home_dir().context("无法获取用户主目录")?;
     let db_path = home.join(".local/share/opencode/opencode.db");
+    log::info!("Opening opencode db at: {:?}", db_path);
     if !db_path.exists() {
         anyhow::bail!("opencode.db 不存在于 {:?}", db_path);
     }
@@ -444,16 +445,24 @@ pub fn list_opencode_messages(
     sql.push_str(" ORDER BY p.time_created DESC LIMIT ?");
     params.push(Box::new(limit as i64));
 
+    log::info!("SQL: {}", sql);
+    log::info!("Params count: {}", params.len());
+
     let mut stmt = conn.prepare(&sql).context("查询 opencode 消息失败")?;
     let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
     let rows = stmt
         .query_map(param_refs.as_slice(), |row| {
+            let user_text: Option<Vec<u8>> = row.get(4)?;
+            let user_text_str = match user_text {
+                Some(bytes) => String::from_utf8_lossy(&bytes).to_string(),
+                None => String::new(),
+            };
             Ok(UserMessage {
                 time_created: row.get(0)?,
                 directory: row.get(1)?,
                 session_id: row.get(2)?,
                 title: row.get(3)?,
-                user_text: row.get::<_, Option<String>>(4)?.unwrap_or_default(),
+                user_text: user_text_str,
             })
         })
         .context("读取 opencode 消息失败")?;
@@ -462,6 +471,7 @@ pub fn list_opencode_messages(
     for row in rows {
         messages.push(row?);
     }
+    log::info!("Found {} messages", messages.len());
     Ok(messages)
 }
 

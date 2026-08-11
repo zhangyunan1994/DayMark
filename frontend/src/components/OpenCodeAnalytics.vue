@@ -67,13 +67,6 @@ const setQuickDate = (days: number) => {
   loadData()
 }
 
-const clearFilters = () => {
-  dateStart.value = ''
-  dateEnd.value = ''
-  directory.value = ''
-  loadData()
-}
-
 const truncateText = (text: string, maxLen = 200) => {
   if (text.length <= maxLen) return text
   return text.substring(0, maxLen) + '...'
@@ -139,12 +132,7 @@ onMounted(() => {
           >
             {{ isLoading ? '加载中...' : '查询' }}
           </button>
-          <button
-            @click="clearFilters"
-            class="bg-gray-100 text-gray-700 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-200"
-          >
-            清除筛选
-          </button>
+
         </div>
         <div class="flex gap-2 mt-3">
           <button @click="setThisWeek" class="text-xs text-blue-600 hover:underline">本周</button>

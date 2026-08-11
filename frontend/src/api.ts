@@ -73,7 +73,7 @@ export interface Report {
 
 export interface ReportTemplate {
   id: string
-  report_type: 'daily' | 'weekly' | 'monthly'
+  report_type: 'daily' | 'weekly' | 'monthly' | 'opencode'
   name: string
   description: string
   sections: string[]

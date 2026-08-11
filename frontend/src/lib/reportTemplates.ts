@@ -1,4 +1,4 @@
-export type ReportType = 'daily' | 'weekly' | 'monthly'
+export type ReportType = 'daily' | 'weekly' | 'monthly' | 'opencode'
 
 export interface ReportTemplate {
   id: string
@@ -27,6 +27,7 @@ export const REPORT_TYPE_LABEL: Record<ReportType, string> = {
   daily: '日报',
   weekly: '周报',
   monthly: '月报',
+  opencode: 'opencode',
 }
 
 const pad = (n: number) => String(n).padStart(2, '0')

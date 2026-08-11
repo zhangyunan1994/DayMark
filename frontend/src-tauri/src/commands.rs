@@ -454,12 +454,15 @@ pub fn opencode_messages(
     directory: Option<String>,
     limit: Option<usize>,
 ) -> Result<Vec<UserMessage>, String> {
+    let ds = date_start.as_deref().filter(|s| !s.is_empty());
+    let de = date_end.as_deref().filter(|s| !s.is_empty());
+    let dir = directory.as_deref().filter(|s| !s.is_empty());
     log::info!("opencode_messages called with: date_start={:?}, date_end={:?}, directory={:?}, limit={:?}", 
-        date_start, date_end, directory, limit);
+        ds, de, dir, limit);
     let result = db::list_opencode_messages(
-        date_start.as_deref(),
-        date_end.as_deref(),
-        directory.as_deref(),
+        ds,
+        de,
+        dir,
         limit.unwrap_or(500),
     );
     match &result {
@@ -474,6 +477,8 @@ pub fn opencode_summary(
     date_start: Option<String>,
     date_end: Option<String>,
 ) -> Result<AnalyticsSummary, String> {
-    log::info!("opencode_summary called with: date_start={:?}, date_end={:?}", date_start, date_end);
-    db::get_opencode_summary(date_start.as_deref(), date_end.as_deref()).map_err(|e| e.to_string())
+    let ds = date_start.as_deref().filter(|s| !s.is_empty());
+    let de = date_end.as_deref().filter(|s| !s.is_empty());
+    log::info!("opencode_summary called with: date_start={:?}, date_end={:?}", ds, de);
+    db::get_opencode_summary(ds, de).map_err(|e| e.to_string())
 }

@@ -17,14 +17,14 @@ const loadData = async () => {
   try {
     const [msgs, sum] = await Promise.all([
       api.opencodeMessages({
-        date_start: dateStart.value || undefined,
-        date_end: dateEnd.value || undefined,
-        directory: directory.value || undefined,
+        date_start: dateStart.value,
+        date_end: dateEnd.value,
+        directory: directory.value,
         limit: 500,
       }),
       api.opencodeSummary({
-        date_start: dateStart.value || undefined,
-        date_end: dateEnd.value || undefined,
+        date_start: dateStart.value,
+        date_end: dateEnd.value,
       }),
     ])
     messages.value = msgs

@@ -29,12 +29,14 @@ const errorMsg = ref('')
 const generateReport = async () => {
   isGenerating.value = true
   errorMsg.value = ''
+  const params = {
+    date_start: dateStart.value,
+    date_end: dateEnd.value,
+    directory: directory.value,
+  }
+  console.log('generateReport params:', params)
   try {
-    await api.generateOpencodeReport({
-      date_start: dateStart.value,
-      date_end: dateEnd.value,
-      directory: directory.value,
-    })
+    await api.generateOpencodeReport(params)
     alert('报告已生成，可在报告记录中查看')
   } catch (e: any) {
     console.error('Failed to generate report:', e)

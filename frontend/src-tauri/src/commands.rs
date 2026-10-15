@@ -483,13 +483,15 @@ pub fn opencode_summary(
     db::get_opencode_summary(ds, de).map_err(|e| e.to_string())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn generate_opencode_report(
     state: State<'_, AppState>,
     date_start: Option<String>,
     date_end: Option<String>,
     directory: Option<String>,
 ) -> Result<Report, String> {
+    log::info!("generate_opencode_report called: date_start={:?}, date_end={:?}, directory={:?}", date_start, date_end, directory);
+
     let llm_config = {
         let db = lock_db(&state)?;
         db::active_llm_config(&db)
@@ -499,7 +501,7 @@ pub async fn generate_opencode_report(
     let de = date_end.as_deref().filter(|s| !s.is_empty());
     let dir = directory.as_deref().filter(|s| !s.is_empty());
 
-    log::info!("generate_opencode_report: date_start={:?}, date_end={:?}, directory={:?}", ds, de, dir);
+    log::info!("generate_opencode_report after filter: ds={:?}, de={:?}, dir={:?}", ds, de, dir);
 
     let messages = db::list_opencode_messages(ds, de, dir, 500)
         .map_err(|e| e.to_string())?;
@@ -519,17 +521,12 @@ pub async fn generate_opencode_report(
         (None, None) => "全部时间".to_string(),
     };
     let system_prompt = format!("这是用户的 opencode 中 user 对话记录，时间范围：{}，分析用户在做什么?", date_range_text);
-    let content = llm::chat(&state.client, &llm_config, &system_prompt, &user_content, 120)
+    let llm_content = llm::chat(&state.client, &llm_config, &system_prompt, &user_content, 120)
         .await
         .map_err(|e| e.to_string())?;
 
-    let date_range = match (ds, de) {
-        (Some(s), Some(e)) => format!("{} 至 {}", s, e),
-        (Some(s), None) => format!("{} 至今", s),
-        (None, Some(e)) => format!("至 {}", e),
-        (None, None) => "全部".to_string(),
-    };
-    let title = format!("OpenCode 使用分析 {}", date_range);
+    let content = format!("时间范围：{}\n\n{}", date_range_text, llm_content);
+    let title = format!("{} OpenCode 使用分析", date_range_text);
 
     let db_conn = lock_db(&state).map_err(|e| e.to_string())?;
     let report = db::create_opencode_report(
